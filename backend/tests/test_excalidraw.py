@@ -189,6 +189,38 @@ def test_open_board_without_file(store):
     assert command("list").json()["boards"] == []
 
 
+def test_delete_board_forgets_it(store):
+    path = "Доски/Удалить.excalidraw"
+    store.add("t1", path, scene.empty_board())
+    http.post("/presence", json={"path": path, "ticket": "t1", "selected": []})
+    command("add", file=arg("t1", path), elements='[{"type": "rectangle", "text": "a"}]')
+    other = "Доски/Оставить.excalidraw"
+    store.add("t2", other, scene.empty_board())
+    http.post("/presence", json={"path": other, "ticket": "t2", "selected": []})
+    assert {b["path"] for b in http.get("/boards").json()["boards"]} == {path, other}
+
+    r = http.delete("/boards", params={"path": path})
+    assert r.status_code == 200 and r.json() == {"path": path, "forgotten": True}
+    listing = http.get("/boards").json()
+    assert [b["path"] for b in listing["boards"]] == [other]                  # чужие доски на месте
+    assert [b["path"] for b in listing["open"]] == [other]
+    assert path not in module._changes
+    assert http.delete("/boards", params={"path": path}).json()["forgotten"] is False   # второй раз — не ошибка
+    assert http.delete("/boards", params={"path": " "}).status_code == 400
+
+
+def test_save_does_not_resurrect_deleted_board(store):
+    store.add("t1", "Доски/x.excalidraw", scene.empty_board())
+    del store.files["t1"]                                                     # файл удалили
+    r = http.put("/file/content", params={"ticket": "t1"}, content=scene.dump(scene.empty_board()),
+                 headers={"If-Match": "v1"})
+    assert r.status_code == 410 and "t1" not in store.files
+    board = scene.empty_board()
+    scene.build(board, [{"type": "rectangle"}])
+    r = http.put("/file/content", params={"ticket": "t1"}, content=scene.dump(board))
+    assert r.status_code == 200 and "t1" in store.files                       # без версии — новая доска, пишем
+
+
 def test_save_rejects_garbage(store):
     store.add("t1", "Доски/x.excalidraw", scene.empty_board())
     r = http.put("/file/content", params={"ticket": "t1"}, content=b"not json")

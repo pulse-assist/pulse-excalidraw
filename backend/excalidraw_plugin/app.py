@@ -10,7 +10,9 @@ API страниц (тот же путь и через /plugin-apps/excalidraw/�
 - GET  /file/meta?ticket=&since=   — версия файла и правки агентов после since (живое обновление);
 - GET  /file/content?ticket=       — файл доски; PUT — сохранить (If-Match — версия, с которой редактор начинал);
 - POST /presence                    — какая доска открыта и что выделено: агент видит это в pulse excalidraw get;
-- GET  /boards                      — доски, которые плагин знает (для страницы меню).
+- GET  /boards                      — доски, которые плагин знает (для страницы меню);
+- DELETE /boards?path=              — доску удалили (файл страница удаляет сама, DELETE /api/files): плагин
+                                      забывает её — список, «открыта сейчас», правки агентов.
 """
 
 from __future__ import annotations
@@ -118,6 +120,14 @@ def forget(path: str) -> bool:
     return found
 
 
+def drop_board(path: str) -> bool:
+    """Доска удалена: убрать её из списка, из открытых и из журнала правок агентов."""
+    with _lock:
+        was_open = _presence.pop(path, None) is not None
+        _changes.pop(path, None)
+    return forget(path) or was_open
+
+
 def _live(path: str) -> dict | None:
     with _lock:
         entry = _presence.get(path)
@@ -213,6 +223,15 @@ def file_content(ticket: str) -> Response:
 @app.put("/file/content")
 async def file_save(ticket: str, request: Request) -> JSONResponse:
     body = await request.body()
+    if request.headers.get("if-match"):
+        # редактор пишет поверх версии, которую открыл, а файла уже нет — доску удалили (кнопкой «Удалить» или в
+        # «Файлах»). Ядро по билету создало бы файл заново, и удалённая доска вернулась бы — не пишем.
+        try:
+            plugin.api.get(f"/api/plugin-files/{ticket}")
+        except PulseApiError as exc:
+            if exc.status == 404 and "Билет" not in str(exc):
+                raise HTTPException(410, "Доска удалена — правки не сохранены") from None
+            raise _error(exc) from None
     try:
         board = scene.parse(body)        # не даём записать на место доски что-то, что её сломает
     except CommandError as exc:
@@ -257,6 +276,14 @@ async def presence(request: Request) -> dict:
 @app.get("/boards")
 def boards() -> dict:
     return {"boards": known_boards(), "open": open_boards()}
+
+
+@app.delete("/boards")
+def board_deleted(path: str) -> dict:
+    path = path.strip()
+    if not path:
+        raise HTTPException(400, "Нет пути доски")
+    return {"path": path, "forgotten": drop_board(path)}
 
 
 # --- команды агентов -----------------------------------------------------------------------------------

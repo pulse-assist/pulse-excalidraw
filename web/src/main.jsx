@@ -11,7 +11,7 @@ import { createRoot } from "react-dom/client";
 
 import { APP, filesLink, openTicket, own, pulse } from "./api";
 import ChatPanel, { boardContext } from "./ChatPanel";
-import Editor, { describeSelection } from "./Editor";
+import Editor, { BACKUP_PREFIX, describeSelection } from "./Editor";
 import { provideContext, setChatTarget, toggleChat, useHost } from "./host";
 
 // шрифты Excalidraw — со своего сервера (static/fonts), без CDN
@@ -75,6 +75,15 @@ function boardName(path) {
   return (path.split("/").pop() || "").replace(/\.excalidraw$/, "");
 }
 
+function deleteQuestion(path) {
+  // в своих папках Пульс удаляет файл насовсем (и его прежние версии), в облачных хранилищах (@yadisk, @gdrive) —
+  // в корзину диска
+  const name = boardName(path);
+  return path.startsWith("@")
+    ? `Удалить доску «${name}»? Файл уйдёт в корзину облачного диска.`
+    : `Удалить доску «${name}»? Это нельзя отменить.`;
+}
+
 function AppMode({ config, theme }) {
   const folder = config.folder;
   const host = useHost();
@@ -134,6 +143,31 @@ function AppMode({ config, theme }) {
     }
   };
 
+  const remove = async (path) => {
+    if (!window.confirm(deleteQuestion(path))) return;
+    // сначала закрываем редактор: он дописывает несохранённые правки, а запись после удаления плагин отклонит
+    if (path === current) setCurrent(null);
+    try {
+      await pulse("/api/files", { method: "DELETE", params: { path } }).catch((e) => {
+        if (e.status !== 404) throw e;            // файла уже нет — доску осталось только забыть
+      });
+    } catch (e) {
+      setError(`Доска «${boardName(path)}» не удалилась: ${e.message}`);
+      return;
+    }
+    await own("/boards", { method: "DELETE", params: { path } }).catch(() => {});
+    try { localStorage.removeItem(BACKUP_PREFIX + path); } catch { /* хранилище браузера недоступно */ }
+    await refresh();
+  };
+
+  useEffect(() => {
+    if (current) return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("path")) return;
+    url.searchParams.delete("path");
+    window.history.replaceState(null, "", url);
+  }, [current]);
+
   return (
     <div className={`xd-app${listOpen ? " xd-app-list" : ""}`}>
       {listOpen && (
@@ -153,12 +187,14 @@ function AppMode({ config, theme }) {
           )}
           <ul className="pl-list">
             {(boards || []).map((b) => (
-              <li key={b.path} className={b.path === current ? "xd-active" : ""}>
+              <li key={b.path} className={`xd-list-row${b.path === current ? " xd-active" : ""}`}>
                 <button type="button" className="xd-board-link" onClick={() => { setCurrent(b.path); if (window.innerWidth < 800) setListOpen(false); }}
                         title={b.path}>
                   <span className="pl-grow">{boardName(b.path)}</span>
                   {b.elsewhere && <span className="pl-small pl-muted">{b.path.split("/").slice(0, -1).join("/") || "/"}</span>}
                 </button>
+                <button type="button" className="xd-close xd-row-delete" onClick={() => remove(b.path)}
+                        title={`Удалить доску «${boardName(b.path)}»`} aria-label={`Удалить доску «${boardName(b.path)}»`}>×</button>
               </li>
             ))}
           </ul>
@@ -169,6 +205,7 @@ function AppMode({ config, theme }) {
           <button type="button" className="xd-btn" onClick={() => setListOpen((v) => !v)}>{listOpen ? "‹ Скрыть список" : "☰ Доски"}</button>
           {current && <span className="xd-title" title={current}>{boardName(current)}</span>}
           {current && <a className="xd-link" href={filesLink(current)} target="_top">в «Файлах»</a>}
+          {current && <button type="button" className="xd-link xd-link-danger" onClick={() => remove(current)}>Удалить</button>}
         </div>
         {!current && <div className="pl-empty xd-message">Выберите доску слева или создайте новую.</div>}
         {current && !opened && <div className="pl-empty xd-message">Открываю доску…</div>}
