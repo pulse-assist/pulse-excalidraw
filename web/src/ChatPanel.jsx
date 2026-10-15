@@ -7,7 +7,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { pulse, pulseLink } from "./api";
 
 const POLL_MS = 2000;
-const CONTEXT_MARK = "\n\n— Доска: ";
 
 // браузер отправляет переводы строк формы как \r\n — приписку ищем с любыми
 const CONTEXT_TAIL = /\r?\n\r?\n— Доска: [\s\S]*$/;
@@ -48,6 +47,20 @@ function progressText(progress) {
   const step = (run?.steps || []).at(-1);
   if (!step) return "Агент думает…";
   return `${step.label}${step.detail ? ` · ${step.detail}` : ""}…`;
+}
+
+/** Приписка к сообщению агенту: какая доска открыта и что выделено. */
+export function boardContext(path, selection) {
+  const sel = selection || { ids: [], text: "" };
+  return `— Доска: ${path} открыта в редакторе Excalidraw; `
+    + (sel.ids.length ? `выделено: ${sel.text}` : "ничего не выделено")
+    + ". Смотреть и менять — pulse excalidraw get/add/update/delete --file (скилл «Excalidraw»).";
+}
+
+/** Кто ответил: agent — {id, name} (раньше выводился «[object Object]»). */
+function agentName(agent) {
+  if (!agent) return "";
+  return typeof agent === "string" ? agent : agent.name || "";
 }
 
 export default function ChatPanel({ path, getSelection, onClose }) {
@@ -104,12 +117,8 @@ export default function ChatPanel({ path, getSelection, onClose }) {
         current = started.chat;
         setChat(current);
       }
-      const selection = getSelection?.() || { ids: [], text: "" };
-      const context = `${CONTEXT_MARK}${path} открыта в редакторе Excalidraw; `
-        + (selection.ids.length ? `выделено: ${selection.text}` : "ничего не выделено")
-        + ". Смотреть и менять — pulse excalidraw get/add/update/delete --file (скилл «Excalidraw»).";
       const form = new FormData();
-      form.append("text", body + context);
+      form.append("text", `${body}\n\n${boardContext(path, getSelection?.())}`);
       await pulse(`/api/chats/${current.id}/messages`, { method: "POST", form });
       setText("");
       await load(current.id);
@@ -153,7 +162,7 @@ export default function ChatPanel({ path, getSelection, onClose }) {
             ) : (
               <div className="xd-pre">{stripContext(m.text || "")}</div>
             )}
-            <div className="xd-msg-meta">{m.agent ? `${m.agent} · ` : ""}{time(m.finished_at || m.created_at)}</div>
+            <div className="xd-msg-meta">{agentName(m.agent) ? `${agentName(m.agent)} · ` : ""}{time(m.finished_at || m.created_at)}</div>
           </div>
         ))}
       </div>
