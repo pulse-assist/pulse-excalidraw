@@ -1,7 +1,7 @@
 {
   "id": "excalidraw",
   "name": "Excalidraw",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "pulse": ">=1.5",
   "description": "Доски Excalidraw в Пульсе: редактор с автосохранением (*.excalidraw в «Файлах»), чат с агентом рядом с доской, агенты читают и рисуют на досках, правки видны сразу",
   "permissions": [

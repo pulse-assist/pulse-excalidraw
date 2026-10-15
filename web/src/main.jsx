@@ -10,8 +10,9 @@ import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 import { APP, filesLink, openTicket, own, pulse } from "./api";
-import ChatPanel from "./ChatPanel";
+import ChatPanel, { boardContext } from "./ChatPanel";
 import Editor, { describeSelection } from "./Editor";
+import { provideContext, setChatTarget, toggleChat, useHost } from "./host";
 
 // шрифты Excalidraw — со своего сервера (static/fonts), без CDN
 window.EXCALIDRAW_ASSET_PATH = `${APP}/`;
@@ -33,16 +34,26 @@ function useTheme() {
   return theme;
 }
 
-function BoardWithChat({ ticket, path, access, mode, config, theme }) {
+function BoardWithChat({ ticket, path, access, mode, config, theme, host }) {
+  // host — страница «Доски» в Пульсе 1.10+: чат рядом показывает сам Пульс (полноценный, как в «Чатах»);
+  // undefined — доска в «Файлах» или старый Пульс: свой чат; null — ещё не ясно, чат пока не показываем.
+  const hostChat = config.chat && host?.chat;
   const [chatOpen, setChatOpen] = useState(() => config.chat && window.innerWidth >= 1100 && params.get("chat") !== "0");
   const apiRef = useRef(null);
   const getSelection = useCallback(() => describeSelection(apiRef.current), []);
+  useEffect(() => {
+    if (!hostChat) return undefined;
+    setChatTarget(path);
+    const stop = provideContext(() => boardContext(path, describeSelection(apiRef.current)));
+    return () => { stop(); setChatTarget(null); };
+  }, [hostChat, path]);
+  const ownChat = config.chat && host !== null && !hostChat;
   return (
-    <div className={`xd-board${chatOpen ? " xd-with-chat" : ""}`}>
+    <div className={`xd-board${ownChat && chatOpen ? " xd-with-chat" : ""}`}>
       <Editor key={ticket} ticket={ticket} path={path} access={access} mode={mode} config={config} theme={theme}
-              onApi={(api) => { apiRef.current = api; }} chatOpen={chatOpen}
-              onToggleChat={config.chat ? () => setChatOpen((v) => !v) : null} />
-      {chatOpen && <ChatPanel path={path} getSelection={getSelection} onClose={() => setChatOpen(false)} />}
+              onApi={(api) => { apiRef.current = api; }} chatOpen={hostChat ? host.chatOpen : chatOpen}
+              onToggleChat={hostChat ? toggleChat : ownChat ? () => setChatOpen((v) => !v) : null} />
+      {ownChat && chatOpen && <ChatPanel path={path} getSelection={getSelection} onClose={() => setChatOpen(false)} />}
     </div>
   );
 }
@@ -66,6 +77,7 @@ function boardName(path) {
 
 function AppMode({ config, theme }) {
   const folder = config.folder;
+  const host = useHost();
   const [boards, setBoards] = useState(null);
   const [error, setError] = useState(null);
   const [current, setCurrent] = useState(params.get("path"));
@@ -163,7 +175,7 @@ function AppMode({ config, theme }) {
         {opened?.error && <div className="pl-error xd-message">Доска не открылась: {opened.error}</div>}
         {opened?.ticket && (
           <BoardWithChat ticket={opened.ticket} path={opened.path} access={opened.access} mode={opened.mode}
-                         config={config} theme={theme} />
+                         config={config} theme={theme} host={host} />
         )}
       </main>
     </div>
