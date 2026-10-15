@@ -1,0 +1,75 @@
+[
+  {
+    "name": "list",
+    "description": "Доски, которые плагин знает (открывали или меняли), и какие открыты в редакторе прямо сейчас — с выделением. Все доски каталога — pulse files find .excalidraw",
+    "args": [
+      {"name": "limit", "description": "сколько досок (по умолчанию 30)"}
+    ]
+  },
+  {
+    "name": "get",
+    "description": "Что на доске: описание словами (рамки, фигуры с подписями, стрелки «A → B»), элементы с id и координатами, что выделено у владельца в редакторе. Без --file — доска, открытая сейчас в редакторе (если она одна)",
+    "args": [
+      {"name": "file", "type": "file", "description": "доска: путь в «Файлах», например «Доски/План.excalidraw»"},
+      {"name": "format", "description": "text (по умолчанию) — описание | json — элементы | both — то и другое | raw — файл целиком"},
+      {"name": "ids", "description": "только эти элементы (id через запятую), для --format json"}
+    ]
+  },
+  {
+    "name": "create",
+    "description": "Новая доска .excalidraw; можно сразу с элементами (--elements, как у add)",
+    "args": [
+      {"name": "file", "type": "file-out", "required": true, "description": "путь новой доски, например «Доски/Схема процесса.excalidraw»"},
+      {"name": "elements", "description": "JSON-список элементов, как у pulse excalidraw add"},
+      {"name": "overwrite", "description": "true — заменить существующую доску (только по просьбе владельца)"}
+    ]
+  },
+  {
+    "name": "add",
+    "description": "Добавить на доску элементы. JSON-список: {\"type\": \"rectangle|ellipse|diamond|sticky|text|arrow|line|frame\", \"id\": \"своя метка для ссылок в этой же команде\", \"text\": \"подпись\", \"x\", \"y\", \"width\", \"height\", \"fill\": \"blue|green|yellow|red|…|#hex\", \"color\": \"…\", \"frame\": \"id рамки\"}; стрелка: {\"type\": \"arrow\", \"from\": \"id\", \"to\": \"id\", \"text\": \"подпись\"}. Без x/y — ставит рядом с уже нарисованным. Если доска открыта у владельца — правка появится у него сразу",
+    "args": [
+      {"name": "file", "type": "file", "access": "write", "description": "доска; без него — открытая сейчас в редакторе"},
+      {"name": "elements", "required": true, "description": "JSON-список элементов"}
+    ]
+  },
+  {
+    "name": "update",
+    "description": "Изменить элементы по id: [{\"id\": \"…\", \"text\": \"новая подпись\", \"x\": …, \"y\": …, \"width\": …, \"height\": …, \"fill\": \"green\", \"color\": \"red\", \"strokeStyle\": \"dashed\", \"fontSize\": 28}]. Подписи и стрелки едут за фигурой",
+    "args": [
+      {"name": "file", "type": "file", "access": "write", "description": "доска; без него — открытая сейчас в редакторе"},
+      {"name": "elements", "required": true, "description": "JSON-список правок с id"}
+    ]
+  },
+  {
+    "name": "delete",
+    "description": "Удалить элементы по id (с их подписями; стрелки отвязываются)",
+    "args": [
+      {"name": "file", "type": "file", "access": "write", "description": "доска; без него — открытая сейчас в редакторе"},
+      {"name": "ids", "required": true, "description": "id элементов через запятую"}
+    ]
+  },
+  {
+    "name": "export",
+    "description": "Картинка доски или выбранных элементов (PNG или SVG): чтобы посмотреть доску или отдать владельцу. Без --out — в папку плагина Plugins/Excalidraw/Экспорт (в ответе путь на диске — его можно открыть Read)",
+    "timeout_sec": 120,
+    "args": [
+      {"name": "file", "type": "file", "description": "доска; без него — открытая сейчас в редакторе"},
+      {"name": "out", "type": "file-out", "description": "куда сохранить картинку в «Файлах» (…/схема.png)"},
+      {"name": "format", "description": "png (по умолчанию) | svg"},
+      {"name": "ids", "description": "только эти элементы (id через запятую)"},
+      {"name": "scale", "description": "масштаб PNG, по умолчанию 2"}
+    ]
+  },
+  {
+    "name": "check",
+    "description": "Проверить плагин: редактор собран, шрифты на месте, PNG рисуется",
+    "args": []
+  },
+  {
+    "name": "forget",
+    "description": "Убрать доску из списка плагина (сам файл не трогается)",
+    "args": [
+      {"name": "path", "required": true, "description": "путь доски, как в pulse excalidraw list"}
+    ]
+  }
+]

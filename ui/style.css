@@ -1,0 +1,11 @@
+body { margin: 0; padding: 16px; }
+.xd-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.xd-btn {
+  font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 6px; cursor: pointer; text-decoration: none;
+  color: var(--pulse-text); background: var(--pulse-panel); border: 1px solid var(--pulse-border);
+}
+.xd-btn:hover { background: var(--pulse-hover); }
+.xd-btn-primary { background: var(--pulse-primary); border-color: var(--pulse-primary); color: #fff; }
+.pl-list li { display: flex; gap: 10px; align-items: center; }
+.xd-link { color: var(--pulse-primary); background: none; border: 0; padding: 0; font: inherit; cursor: pointer; text-decoration: none; }
+.xd-path { font-size: 12px; }

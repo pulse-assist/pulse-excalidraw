@@ -1,0 +1,78 @@
+{
+  "id": "excalidraw",
+  "name": "Excalidraw",
+  "version": "0.1.0",
+  "pulse": ">=1.5",
+  "description": "Доски Excalidraw в Пульсе: редактор с автосохранением (*.excalidraw в «Файлах»), чат с агентом рядом с доской, агенты читают и рисуют на досках, правки видны сразу",
+  "permissions": [
+    "embed",
+    "files:open",
+    "files"
+  ],
+  "runtime": {
+    "kind": "python",
+    "entry": "excalidraw_plugin.app:app",
+    "path": "backend",
+    "requirements": "backend/requirements.txt",
+    "health": "/health"
+  },
+  "ui": {
+    "dist": "ui"
+  },
+  "menu": [
+    {
+      "id": "main",
+      "title": "Доски",
+      "icon": "bi-easel",
+      "page": "index.html",
+      "app": "/editor"
+    }
+  ],
+  "settings": {
+    "folder": {
+      "type": "string",
+      "title": "Папка досок",
+      "default": "Доски",
+      "description": "Папка в «Файлах», где редактор показывает и создаёт доски; открыть можно любую доску .excalidraw из «Файлов»"
+    },
+    "autosave_seconds": {
+      "type": "number",
+      "title": "Автосохранение через, с",
+      "default": 2,
+      "description": "Пауза после последней правки до сохранения (не позже чем через 10 с после первой)"
+    },
+    "chat_panel": {
+      "type": "boolean",
+      "title": "Чат с агентом рядом с доской",
+      "default": true
+    }
+  },
+  "files": {
+    "handlers": [
+      {
+        "id": "edit",
+        "title": "Excalidraw",
+        "extensions": [
+          "excalidraw"
+        ],
+        "path": "/editor",
+        "access": "write",
+        "preview": true,
+        "mobile": "view"
+      }
+    ],
+    "templates": [
+      {
+        "title": "Доска Excalidraw",
+        "extension": "excalidraw",
+        "file": "templates/new.excalidraw"
+      }
+    ]
+  },
+  "skills": [
+    "skills/excalidraw.md"
+  ],
+  "commands": "commands.json",
+  "check": "check",
+  "install": "INSTALL.md"
+}
