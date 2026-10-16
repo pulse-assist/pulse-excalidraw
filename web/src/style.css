@@ -112,8 +112,14 @@ html, body, #root { height: 100%; margin: 0; }
   display: flex; flex-direction: column; align-items: stretch; gap: 2px; width: 100%; text-align: left; font: inherit;
   padding: 7px 12px; background: none; border: 0; color: var(--xd-text); cursor: pointer;
 }
-.xd-board-link:hover { background: var(--xd-hover); }
-.xd-active .xd-board-link { background: var(--xd-hover); box-shadow: inset 3px 0 0 var(--xd-primary); }
+.xd-list-row { display: flex; align-items: center; }
+.xd-list-row .xd-board-link { flex: 1 1 auto; min-width: 0; width: auto; }
+.xd-list-row:hover, .xd-list-row.xd-active { background: var(--xd-hover); }
+.xd-active .xd-board-link { box-shadow: inset 3px 0 0 var(--xd-primary); }
+.xd-row-delete { flex: 0 0 auto; margin-right: 6px; visibility: hidden; }
+.xd-list-row:hover .xd-row-delete, .xd-list-row:focus-within .xd-row-delete, .xd-active .xd-row-delete { visibility: visible; }
+.xd-row-delete:hover, .xd-link-danger { color: var(--xd-urgent); }
+@media (hover: none) { .xd-row-delete { visibility: visible; } }
 .xd-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .xd-main-head { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--xd-divider); }
 .xd-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

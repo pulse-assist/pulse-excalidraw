@@ -10,7 +10,7 @@ import { APP, HttpError, own } from "./api";
 import { byId, canon, mergeElements, mergeFiles, stamp } from "./merge";
 
 const MAX_WAIT_MS = 10000;          // автосохранение не позже, чем через 10 с после первой правки
-const BACKUP_PREFIX = "pulse-excalidraw:";
+export const BACKUP_PREFIX = "pulse-excalidraw:";
 const KEEPALIVE_LIMIT = 60000;      // fetch keepalive при закрытии вкладки берёт до 64 КБ
 
 function hhmm(date = new Date()) {
@@ -241,6 +241,10 @@ export default function Editor({ ticket, path, access, mode, config, theme, onAp
         try { localStorage.removeItem(BACKUP_PREFIX + path); } catch { /* ничего */ }
       }
     } catch (e) {
+      if (e instanceof HttpError && e.status === 410) {      // доску удалили — писать некуда и незачем
+        report("error", e.message);
+        return;
+      }
       report("error", `Не сохранилось: ${e.message}`);
       writeBackup();
       s.timer = setTimeout(() => save(), 15000);      // повторим сами; копия правок — в браузере
@@ -302,7 +306,8 @@ export default function Editor({ ticket, path, access, mode, config, theme, onAp
     const beat = setInterval(() => sendPresence(), 30000);
     const bye = () => sendPresence(true);
     window.addEventListener("pagehide", bye);
-    return () => { clearInterval(beat); window.removeEventListener("pagehide", bye); bye(); };
+    // отложенный сигнал о выделении после закрытия вернул бы в список плагина только что удалённую доску
+    return () => { clearInterval(beat); clearTimeout(presenceTimer.current); window.removeEventListener("pagehide", bye); bye(); };
   }, [initial, sendPresence]);
 
   // --- живое обновление: файл поменялся (агент, другая вкладка) — подтягиваем ----------------------------
